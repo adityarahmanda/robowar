@@ -11,6 +11,8 @@ public class LevelMenu : MonoBehaviour
     [Header("UI Reference")]
     [SerializeField] private TextMeshProUGUI m_timeSurvivedText;
     [SerializeField] private TextMeshProUGUI m_timeSurvivedScoreText;
+    [SerializeField] private TextMeshProUGUI m_highScoreText;
+
     [SerializeField] private Button m_restartButton;
     [SerializeField] private Button m_mainMenuButton;
 
@@ -20,10 +22,19 @@ public class LevelMenu : MonoBehaviour
         m_gameOverPanel.SetActive(false);
 
         LevelManager.i.onLevelEnded.AddListener(() => {
-            var timeSurvived = LevelManager.i.timeSurvived.ToString("0.00");
-            m_timeSurvivedScoreText.SetText($"Time Survived: {timeSurvived}s");
             m_mainPanel.SetActive(false);
             m_gameOverPanel.SetActive(true);
+
+            if(LevelManager.i.timeSurvived > LevelManager.i.lastHighScore)
+            {
+                m_timeSurvivedScoreText.SetText("New High Score!");
+                m_highScoreText.SetText("Time Survived : "  + GetFormattedTimeSurvived() + "s");
+            }
+            else
+            {
+                m_timeSurvivedScoreText.SetText("Time Survived : " + GetFormattedTimeSurvived() + "s");
+                m_highScoreText.SetText("High Score : "  + GetFormattedHighScore() + "s");
+            }
         });
 
         m_restartButton.onClick.AddListener(() => GameManager.i.StartGame());
@@ -34,7 +45,16 @@ public class LevelMenu : MonoBehaviour
     {
         if(LevelManager.i.LevelEnded) return;
 
-        var timeSurvived = LevelManager.i.timeSurvived.ToString("0.00");
-        m_timeSurvivedText.SetText($"Time Survived: {timeSurvived}s");    
+        m_timeSurvivedText.SetText("Time Survived : " + GetFormattedTimeSurvived() + "s");    
+    }
+
+    private string GetFormattedTimeSurvived()
+    {
+        return LevelManager.i.timeSurvived.ToString("0.00");
+    }
+
+    private string GetFormattedHighScore()
+    {
+        return LevelManager.i.lastHighScore.ToString("0.00");
     }
 }

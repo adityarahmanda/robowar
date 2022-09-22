@@ -6,7 +6,9 @@ TagManager:
   tags:
   - FxTemporaire
   - Enemy
-  - Tower
+  - PlayerWeapon
+  - EnemyWeapon
+  - Collectible
   layers:
   - Default
   - TransparentFX
@@ -15,9 +17,9 @@ TagManager:
   - Water
   - UI
   - Player
-  - Tower
+  - Enemy
   - Ground
-  - 
+  - EnemyWeapon
   - 
   - 
   - 

@@ -3,55 +3,50 @@ using UnityEngine;
 
 public class PlayerWeaponController : MonoBehaviour 
 {
-    [SerializeField] private Weapon m_weapon;
-    public Weapon weapon
-    {
-        get { return m_weapon; }
-    }
+    [SerializeField] private Player m_main;
+    public Player main => m_main;
 
-    [SerializeField] private ParticleSystem m_bulletShooterFX;
-    [SerializeField] private ParticleSystem m_muzzleFX;
+    private int m_damage = 15;
+
+    [Range(0, 30f)] private float m_range = 5f;
+    public float range => m_range;
+
+    [SerializeField, Range(0, 5)] private int m_magazineSize = 3;
+    public int magazineSize => m_magazineSize;
+
+    [SerializeField, Range(0, 5)] private int m_maxMagazineSize = 5;
+
+    [SerializeField] private float m_bulletsLeft;
+    public float bulletsLeft => m_bulletsLeft;
+
+    [SerializeField, Range(0, 10f)] private float m_bulletsCooldownTime = .3f;
+
+    [SerializeField, Range(0, 1f)] private float m_shootBuffer = .3f;
+    private float m_shootBufferCounter;
+    [SerializeField] private float m_shootDuration = .3f;
+    [SerializeField] private float m_shootSpeed = 1f;
+    private float m_shootForce = 3f;
+    private float m_rotationOffset = .25f;
+
+    [SerializeField] private Bullet m_bulletPrefab;
+    [SerializeField] private Transform m_shootPoint;
+
+    private Vector2 m_attackInput;
+    private Vector3 m_shootingDirection;
+    public Vector3 shootingDirection => m_shootingDirection;
 
     private Animator m_animator;
     private PlayerMoveController m_moveController;
-    private float m_rotationOffset = .5f;
-    
-    private Vector3 m_shootingDirection;
-    public Vector3 shootingDirection
-    {
-        get { return m_shootingDirection; }
-    }
-    
-    private bool m_isReadyToShoot = true;
-    
+
     private bool m_isShooting;
-    public bool IsShooting
+    public bool IsShooting => m_isShooting;
+    
+    private void Start()
     {
-        get { return m_isShooting; }
-    }
+        m_animator = m_main.animator;
+        m_moveController = m_main.moveController;
         
-    private void Awake() 
-    {
-        m_animator = GetComponentInChildren<Animator>();
-        m_moveController = GetComponent<PlayerMoveController>();
-    }
-
-    private void Start() 
-    {
-        m_bulletShooterFX.Stop();
-        var bulletShooterModule = m_bulletShooterFX.main;
-        bulletShooterModule.startLifetime = m_weapon.range / bulletShooterModule.startSpeed.constant;
-
-        if(m_weapon.type == WeaponType.RapidShot)
-        {
-            bulletShooterModule.duration = m_weapon.timeBetweenShoot;
-        }
-
-        m_muzzleFX.Stop();
-        var muzzleModule = m_muzzleFX.main;
-        muzzleModule.duration = m_weapon.timeBetweenShoot;
-
-        m_weapon.bulletsLeft = m_weapon.magazineSize;
+        m_bulletsLeft = m_magazineSize;
 
         InputManager.i.AttackInput.onDrag.AddListener(OnDragAttackInput);
         InputManager.i.AttackInput.onPointerUp.AddListener(OnPointerUpAttackInput);
@@ -59,57 +54,95 @@ public class PlayerWeaponController : MonoBehaviour
 
     private void Update() 
     {
-        if(m_weapon.bulletsLeft < m_weapon.magazineSize)
+        if(main.isDie) return;
+
+        m_shootBufferCounter -= Time.deltaTime;
+
+        if(!m_isShooting && m_bulletsLeft >= 1f && m_shootBufferCounter > 0f)
         {
-            m_weapon.bulletsLeft += (1 / m_weapon.bulletsCooldownTime) * Time.deltaTime;
+            StartShoot();
+            m_shootBufferCounter = 0;
         }
-        else
-        {
-            m_weapon.bulletsLeft = m_weapon.magazineSize;
-        }
+
+        Reload();
     }
 
-    private void Shoot() 
+    private void StartShoot()
     {
         m_isShooting = true;
-        m_isReadyToShoot = false;
+        m_bulletsLeft--;
 
-        StartCoroutine(ShootCoroutine());
+        StartCoroutine(PrepareShoot());
     }
 
-    private IEnumerator ShootCoroutine()
+    private IEnumerator PrepareShoot()
     {
+        m_shootingDirection = new Vector3(m_attackInput.x, 0, m_attackInput.y);
+        
+        // look to shoot direction
         Quaternion targetRotation = Quaternion.LookRotation(m_shootingDirection, Vector3.up); 
         yield return new WaitUntil(() => m_moveController.root.rotation.eulerAngles.y >= targetRotation.eulerAngles.y - m_rotationOffset && m_moveController.root.rotation.eulerAngles.y <= targetRotation.eulerAngles.y + m_rotationOffset);
 
+        // start shooting
+        m_animator.SetFloat("shootSpeed", m_shootSpeed);
         m_animator.SetBool("isShoot", true);
-        m_bulletShooterFX.Play();
-        m_muzzleFX.Play();
-        m_weapon.bulletsLeft--;
 
-        Invoke("ResetShoot", m_weapon.timeBetweenShoot);
+        // end shoot on timeout
+        Invoke("EndShoot", m_shootDuration);
     }
 
-    public void ResetShoot()
+    public void Shoot()
     {
-        m_animator.SetBool("isShoot", false);
+        if(m_bulletPrefab != null)
+        {
+            Bullet currentBullet = Instantiate(m_bulletPrefab, m_shootPoint.position, Quaternion.identity); //store instantiated bullet in currentBullet        
+            currentBullet.transform.forward = m_shootingDirection.normalized;
+            
+            float bulletRange =  m_range - Vector3.Distance(m_main.transform.position, m_shootPoint.transform.position);
+            currentBullet.Init(m_damage, bulletRange, m_shootingDirection.normalized, m_shootForce);
+        }
+
+        AudioManager.i.PlaySFX("laser");
+    }
+
+    private void EndShoot()
+    {
         m_isShooting = false;
-        m_isReadyToShoot = true;
+
+        m_animator.SetBool("isShoot", false);
+    }
+
+    private void Reload()
+    {
+        if(m_isShooting) return;
+        
+        if(m_bulletsLeft < m_magazineSize)
+        {
+            m_bulletsLeft += (1 / m_bulletsCooldownTime) * Time.deltaTime;
+        }
+        else
+        {
+            m_bulletsLeft = m_magazineSize;
+        }
     }
 
     private void OnDragAttackInput(Vector2 direction)
     {
-        if(!m_isShooting)
-        {
-            m_shootingDirection = new Vector3(direction.x, 0, direction.y);
-        }
+        m_attackInput = direction;
     }
 
     private void OnPointerUpAttackInput()
     {
-        if(m_weapon.bulletsLeft >= 1f && m_isReadyToShoot)
-        {
-            Shoot();
+        m_shootBufferCounter = m_shootBuffer;
+    }
+
+    public void IncreaseMagazineSize()
+    {
+        if(m_magazineSize >= m_maxMagazineSize) {
+            m_bulletsLeft = m_magazineSize;
+            return;
         }
+        
+        m_magazineSize++;
     }
 }

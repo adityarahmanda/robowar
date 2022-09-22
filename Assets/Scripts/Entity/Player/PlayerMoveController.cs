@@ -2,62 +2,48 @@ using UnityEngine;
 
 public class PlayerMoveController : MonoBehaviour 
 {
-    [SerializeField, Range(0f, 30f)] protected float m_maxSpeed = 4f;
-    public float MaxSpeed
-	{
-		get { return m_maxSpeed; }
-		set { m_maxSpeed = value; }
-	}
-    
-    [SerializeField, Range(0f, 1f)] protected float m_moveSmooth = .3f;
-    [SerializeField, Range(0f, 1f)] protected float m_rotationSmooth = .3f;
-    
-    [SerializeField] protected Transform m_root;
-    public Transform root
-    {
-        get { return m_root; }
-    }
-    
-    protected Vector2 m_input;
-    protected Vector3 m_direction, m_desiredDirection, m_velocity;
-    protected Rigidbody m_body;
-    protected Animator m_animator;
-    protected CharacterController m_characterController;
-    protected PlayerWeaponController m_weaponController;
+    [SerializeField] private Player m_main;
+    public Player main => m_main;
 
-    protected bool overrideDirection = false;
+    [SerializeField, Range(0f, 30f)] private float m_maxSpeed = 4f;
+    public float maxSpeed => m_maxSpeed;
+    
+    [SerializeField, Range(0f, 1f)] private float m_moveSmooth = .3f;
+    [SerializeField, Range(0f, 1f)] private float m_rotationSmooth = .3f;
+    
+    [SerializeField] private Transform m_root;
+    public Transform root => m_root;
+    
+    private Vector2 m_input;
+    private Vector3 m_direction, m_desiredDirection, m_velocity;
 
-    protected virtual void Awake() 
+    private Animator m_animator;
+    private CharacterController m_characterController;
+    private PlayerWeaponController m_weaponController;
+
+    private void Start() 
     {
-		m_body = GetComponent<Rigidbody>(); 
-        m_animator = GetComponentInChildren<Animator>();
-        m_characterController = GetComponent<CharacterController>(); 
-        m_weaponController = GetComponent<PlayerWeaponController>();
+        m_animator = m_main.animator;
+        m_characterController = m_main.characterController;
+        m_weaponController = m_main.weaponController;
     }
 
-    protected virtual void Update()
+    private void Update()
     {
+        if(main.isDie) return;
+        
         MoveAction();
     }
 
-    protected virtual void MoveAction()
-    {
-        if(LevelManager.i.LevelEnded)
-        {
-            m_direction = Vector3.zero;
-        }
-        else
-        {
-            m_direction = new Vector3(InputManager.i.MoveInput.Horizontal, 0, InputManager.i.MoveInput.Vertical);
-        }
+    private void MoveAction()
+    {   
+        m_animator.SetBool("isMove", InputManager.i.MoveInput.Direction.magnitude > 0f);
 
-        if(m_direction != Vector3.zero) 
+        m_direction = new Vector3(InputManager.i.MoveInput.Horizontal, 0, InputManager.i.MoveInput.Vertical);
+        
+        if (!m_characterController.isGrounded)
         {
-            m_animator.SetBool("isMove", true);
-        } 
-        else 
-        {
-            m_animator.SetBool("isMove", false);
+            m_direction += Physics.gravity;
         }
 
         m_desiredDirection = Vector3.SmoothDamp(m_desiredDirection, m_direction.normalized, ref m_velocity, m_moveSmooth);
@@ -65,16 +51,21 @@ public class PlayerMoveController : MonoBehaviour
 
         if(m_weaponController.IsShooting)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(m_weaponController.shootingDirection, Vector3.up);
-            m_root.transform.rotation = Quaternion.Slerp(m_root.transform.rotation, targetRotation, m_rotationSmooth);
+            LookAt(m_weaponController.shootingDirection);
         }
         else 
         {
-            if(m_direction != Vector3.zero)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(m_direction, Vector3.up);
-                m_root.transform.rotation = Quaternion.Slerp(m_root.transform.rotation, targetRotation, m_rotationSmooth);
-            }
+            LookAt(m_direction);
         }
+    }
+
+    public void LookAt(Vector3 direction)
+    {
+        Vector3 lookDirection = new Vector3(direction.x, 0, direction.z);
+
+        if(lookDirection == Vector3.zero) return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+        m_root.transform.rotation = Quaternion.Slerp(m_root.transform.rotation, targetRotation, m_rotationSmooth);
     }
 }

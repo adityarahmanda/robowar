@@ -5,14 +5,11 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager i;
 
-    public WeaponType weaponType;
-
     private void Awake() 
     {
         if(i == null)
         {
             i = this;
-            DontDestroyOnLoad(gameObject);
         }
         else
         {

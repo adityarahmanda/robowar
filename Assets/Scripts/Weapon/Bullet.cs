@@ -2,27 +2,44 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Bullet : MonoBehaviour
+public class Bullet : Weapon
 {
-    public int damage = 15;
-    private ParticleSystem m_particleFX;
-    private List<ParticleCollisionEvent> m_colEvents = new List<ParticleCollisionEvent>();
+    private float m_range;
+    private float m_distanceTravelled; 
+
+    private Vector3 m_initPos;
+    private Rigidbody m_body;
+
+    private void Awake() 
+    {
+        m_body = GetComponent<Rigidbody>();
+    }
 
     private void Start() 
     {
-        m_particleFX = GetComponent<ParticleSystem>();
+        m_initPos = transform.position;
     }
-    
-    private void OnParticleCollision(GameObject other) 
-    {   
-        if(other.CompareTag("Enemy"))
+
+    private void Update() 
+    {
+        m_distanceTravelled = Vector3.Distance(transform.position, m_initPos);
+
+        if(m_distanceTravelled > m_range)
         {
-            int events = m_particleFX.GetCollisionEvents(other, m_colEvents);
-            Enemy enemy = other.GetComponent<Enemy>();
-            for(int i = 0; i < events; i++)
-            {
-                enemy.ApplyDamage(damage);
-            }
+            Destroy(gameObject);
         }
+    }
+
+    public void Init(int damage, float range, Vector3 direction, float force) 
+    {
+        base.Init(damage);
+        m_range = range;
+        transform.forward = direction;
+        m_body.AddForce(direction * force, ForceMode.Impulse);
+    }
+
+    private void OnTriggerEnter(Collider other) 
+    {
+        Destroy(gameObject); 
     }
 }

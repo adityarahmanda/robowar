@@ -88,7 +88,7 @@ GameObject:
   - component: {fileID: 1659322850679669156}
   - component: {fileID: 1659322850679669147}
   - component: {fileID: 1659322850679669158}
-  - component: {fileID: 66622635425215306}
+  - component: {fileID: 162080058873617910}
   m_Layer: 0
   m_Name: Weapon Range Indicator
   m_TagString: Untagged
@@ -169,7 +169,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1659322850679669144}
   m_CullTransparentMesh: 1
---- !u!114 &66622635425215306
+--- !u!114 &162080058873617910
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -178,10 +178,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1659322850679669144}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b800eea40ab01340b2f70ddb55f6fad, type: 3}
+  m_Script: {fileID: 11500000, guid: e134260333091de489b05b57cff27d73, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_weapon: {fileID: 0}
   m_whatIsEnvironment:
     serializedVersion: 2
-    m_Bits: 136
+    m_Bits: 8
